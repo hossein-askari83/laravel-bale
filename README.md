@@ -1,69 +1,181 @@
-# :package_description
+# Laravel Bale (Safir API)
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-[![GitHub Tests Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/run-tests.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3Arun-tests+branch%3Amain)
-[![GitHub Code Style Action Status](https://github.com/spatie/package-skeleton-laravel/actions/workflows/fix-php-code-style-issues.yml/badge.svg)](https://github.com/:vendor_slug/:package_slug/actions?query=workflow%3A"Fix+PHP+code+style+issues"+branch%3Amain)
-[![Total Downloads](https://img.shields.io/packagist/dt/:vendor_slug/:package_slug.svg?style=flat-square)](https://packagist.org/packages/:vendor_slug/:package_slug)
-<!--delete-->
----
-This repo can be used to scaffold a Laravel package. Follow these steps to get started:
+Production-ready Laravel package for Bale Messenger Safir APIs with layered architecture, typed DTOs, robust HTTP handling, and fluent developer experience.
 
-1. Press the "Use this template" button at the top of this repo to create a new repo with the contents of this skeleton.
-2. Run "php ./configure.php" to run a script that will replace all placeholders throughout all the files.
-3. Have fun creating your package.
-4. If you need help creating a package, consider picking up our <a href="https://laravelpackage.training">Laravel Package Training</a> video course.
----
-<!--/delete-->
-This is where your description should go. Limit it to a paragraph or two. Consider adding a small example.
+## API understanding (Safir map)
 
-## Support us
+### Authentication
+- **Header:** `api-access-key`
+- **Source:** Safir panel API access key
+- **Scope:** required on every endpoint
 
-[<img src="https://github-ads.s3.eu-central-1.amazonaws.com/:package_name.jpg?t=1" width="419px" />](https://spatie.be/github-ad-click/:package_name)
+### Base URL and transport
+- **Base URL:** `https://safir.bale.ai/api/v3`
+- **Protocol:** HTTPS
+- **Formats:** JSON (`send_message`), multipart/form-data (`upload_file`)
 
-We invest a lot of resources into creating [best in class open source packages](https://spatie.be/open-source). You can support us by [buying one of our paid products](https://spatie.be/open-source/support-us).
+### Endpoints
+- `POST /send_message`
+  - body: `request_id?`, `bot_id`, `phone_number`, `message_data`
+  - `message_data.message`: `text?`, `file_id?`, `copy_text?`, `reply_markup?`
+  - `message_data.otp_message`: `otp`
+  - `message_data.is_secure`: `bool`
+  - success: `message_id`, `error_data: null`
+  - partial/business errors: `error_data[]` with `phone_number`, `code`, `description`
+- `POST /upload_file`
+  - multipart: `file` (max 500MB in docs)
+  - success: `file_id`
+  - errors: `error` / `error_data`
 
-We highly appreciate you sending us a postcard from your hometown, mentioning which of our package(s) you are using. You'll find our address on [our contact page](https://spatie.be/about-us). We publish all received postcards on [our virtual postcard wall](https://spatie.be/open-source/postcards).
+### Error model
+- HTTP-level errors (401/403/422/429/5xx)
+- Business errors in response body (`error_data`) even with HTTP 200
+- Known Safir codes include internal error, rate limit, invalid input, invalid phone, not bale user, payment required, max contact limit.
+
+### Idempotency
+- Optional `request_id` prevents duplicate sends on retries; strongly recommended.
+
+### Gaps in official document
+- No explicit webhook/callback API contract in provided document.
+- No documented request signature/HMAC format for webhooks.
+- No separate environment matrix (sandbox/staging/prod) in provided document.
 
 ## Installation
 
-You can install the package via composer:
-
 ```bash
-composer require :vendor_slug/:package_slug
+composer require hossein-askari83/laravel-bale
 ```
 
-You can publish and run the migrations with:
+## Configuration
+
+Publish config:
 
 ```bash
-php artisan vendor:publish --tag=":package_slug-migrations"
-php artisan migrate
+php artisan vendor:publish --tag="bale-config"
 ```
 
-You can publish the config file with:
-
-```bash
-php artisan vendor:publish --tag=":package_slug-config"
-```
-
-This is the contents of the published config file:
+`config/bale.php`:
 
 ```php
 return [
+    'token' => env('BALE_API_TOKEN'),
+    'base_url' => env('BALE_BASE_URL', 'https://safir.bale.ai/api/v3'),
+    'default_bot_id' => env('BALE_DEFAULT_BOT_ID'),
+    'timeout' => (float) env('BALE_TIMEOUT', 15),
+    'retry' => [
+        'times' => (int) env('BALE_RETRY_TIMES', 2),
+        'sleep_milliseconds' => (int) env('BALE_RETRY_SLEEP_MS', 200),
+    ],
+    'logging' => [
+        'enabled' => (bool) env('BALE_LOGGING_ENABLED', true),
+        'channel' => env('BALE_LOG_CHANNEL'),
+    ],
+    'webhook' => [
+        'secret' => env('BALE_WEBHOOK_SECRET'),
+    ],
 ];
 ```
 
-Optionally, you can publish the views using
+## Authentication
 
-```bash
-php artisan vendor:publish --tag=":package_slug-views"
+Set:
+
+```dotenv
+BALE_API_TOKEN=your-safir-api-access-key
+BALE_DEFAULT_BOT_ID=123456789
 ```
 
-## Usage
+## Usage examples
+
+### Facade
 
 ```php
-$:variable = new VendorName\Skeleton();
-echo $:variable->echoPhrase('Hello, VendorName!');
+use HosseinAskari\LaravelBale\Facades\Bale;
+
+$response = Bale::message()
+    ->to('989123456789')
+    ->text('Hello from Laravel')
+    ->requestId((string) Str::uuid())
+    ->send();
 ```
+
+### Dependency injection
+
+```php
+use HosseinAskari\LaravelBale\Contracts\BaleMessageSenderInterface;
+
+final class NotifyUserAction
+{
+    public function __construct(private BaleMessageSenderInterface $bale) {}
+
+    public function execute(string $phone): void
+    {
+        $this->bale->message()
+            ->to($phone)
+            ->text('Verification sent')
+            ->send();
+    }
+}
+```
+
+## Sending messages
+
+### Text
+
+```php
+Bale::message()
+    ->to('989123456789')
+    ->text('Text message')
+    ->send();
+```
+
+### OTP
+
+```php
+Bale::message()
+    ->to('989123456789')
+    ->otp('123456')
+    ->send();
+```
+
+### Secure message
+
+```php
+Bale::message()
+    ->to('989123456789')
+    ->text('Confidential')
+    ->secure()
+    ->send();
+```
+
+## Sending media
+
+```php
+$upload = Bale::uploadFile(storage_path('app/public/brochure.pdf'));
+$fileId = $upload->data['file_id'];
+
+Bale::message()
+    ->to('989123456789')
+    ->text('Attachment caption')
+    ->file($fileId)
+    ->send();
+```
+
+## Webhooks
+
+Provided Safir document does not define webhook callback endpoint format/signature.  
+This package reserves `bale.webhook.secret` for when Safir webhook verification specs are available.
+
+## Error handling
+
+Typed exceptions:
+- `BaleException`
+- `ApiException`
+- `AuthenticationException`
+- `ValidationException`
+- `RateLimitException`
+
+Each includes message, status code, API error code, and API payload where available.
 
 ## Testing
 
@@ -71,23 +183,15 @@ echo $:variable->echoPhrase('Hello, VendorName!');
 composer test
 ```
 
-## Changelog
+Tests use Pest + Laravel Testbench and mock external HTTP via `Http::fake()`.
 
-Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
+## Contribution guide
 
-## Contributing
-
-Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
-
-## Security Vulnerabilities
-
-Please review [our security policy](../../security/policy) on how to report security vulnerabilities.
-
-## Credits
-
-- [:author_name](https://github.com/:author_username)
-- [All Contributors](../../contributors)
+1. Fork the repository.
+2. Create a feature branch.
+3. Run `composer test` and `composer analyse`.
+4. Open a pull request with clear change notes.
 
 ## License
 
-The MIT License (MIT). Please see [License File](LICENSE.md) for more information.
+MIT. See [LICENSE.md](LICENSE.md).

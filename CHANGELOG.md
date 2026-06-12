@@ -1,3 +1,3 @@
 # Changelog
 
-All notable changes to `:package_name` will be documented in this file.
+All notable changes to `hossein-askari83/laravel-bale` will be documented in this file.
