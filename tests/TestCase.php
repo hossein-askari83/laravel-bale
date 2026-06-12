@@ -1,37 +1,24 @@
 <?php
 
-namespace VendorName\Skeleton\Tests;
+declare(strict_types=1);
 
-use Illuminate\Database\Eloquent\Factories\Factory;
+namespace HosseinAskari\LaravelBale\Tests;
+
+use HosseinAskari\LaravelBale\BaleServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
-use VendorName\Skeleton\SkeletonServiceProvider;
 
-class TestCase extends Orchestra
+abstract class TestCase extends Orchestra
 {
-    protected function setUp(): void
+    protected function getPackageProviders($app): array
     {
-        parent::setUp();
-
-        Factory::guessFactoryNamesUsing(
-            fn (string $modelName) => 'VendorName\\Skeleton\\Database\\Factories\\'.class_basename($modelName).'Factory'
-        );
+        return [BaleServiceProvider::class];
     }
 
-    protected function getPackageProviders($app)
+    protected function defineEnvironment($app): void
     {
-        return [
-            SkeletonServiceProvider::class,
-        ];
-    }
-
-    public function getEnvironmentSetUp($app)
-    {
-        config()->set('database.default', 'testing');
-
-        /*
-         foreach (\Illuminate\Support\Facades\File::allFiles(__DIR__ . '/../database/migrations') as $migration) {
-            (include $migration->getRealPath())->up();
-         }
-         */
+        $app['config']->set('bale.token', 'test-token');
+        $app['config']->set('bale.base_url', 'https://safir.bale.ai/api/v3');
+        $app['config']->set('bale.default_bot_id', 123456789);
+        $app['config']->set('bale.logging.enabled', false);
     }
 }
