@@ -39,7 +39,8 @@ it('throws when no bot_id is available', function (): void {
 
 it('sends text message via fluent builder', function (): void {
     $captured = null;
-    $client = new class ($captured) implements BaleClientInterface {
+    $client = new class($captured) implements BaleClientInterface
+    {
         public function __construct(private mixed &$captured) {}
 
         public function sendMessage(SendMessageRequest $request): BaleResponse
@@ -68,7 +69,8 @@ it('sends text message via fluent builder', function (): void {
 
 it('builds OTP message payload', function (): void {
     $captured = null;
-    $client = new class ($captured) implements BaleClientInterface {
+    $client = new class($captured) implements BaleClientInterface
+    {
         public function __construct(private mixed &$captured) {}
 
         public function sendMessage(SendMessageRequest $request): BaleResponse
@@ -99,7 +101,8 @@ it('builds OTP message payload', function (): void {
 
 it('enables secure flag on message', function (): void {
     $captured = null;
-    $client = new class ($captured) implements BaleClientInterface {
+    $client = new class($captured) implements BaleClientInterface
+    {
         public function __construct(private mixed &$captured) {}
 
         public function sendMessage(SendMessageRequest $request): BaleResponse
@@ -127,7 +130,8 @@ it('enables secure flag on message', function (): void {
 
 function fakeClient(): BaleClientInterface
 {
-    return new class implements BaleClientInterface {
+    return new class implements BaleClientInterface
+    {
         public function sendMessage(SendMessageRequest $request): BaleResponse
         {
             return BaleResponse::success(['message_id' => 'fake']);
