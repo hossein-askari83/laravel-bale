@@ -37,7 +37,6 @@ Production-ready Laravel package for Bale Messenger Safir APIs with layered arch
 
 ### Gaps in official document
 - No explicit webhook/callback API contract in provided document.
-- No documented request signature/HMAC format for webhooks.
 - No separate environment matrix (sandbox/staging/prod) in provided document.
 
 ## Installation
@@ -69,9 +68,6 @@ return [
     'logging' => [
         'enabled' => (bool) env('BALE_LOGGING_ENABLED', true),
         'channel' => env('BALE_LOG_CHANNEL'),
-    ],
-    'webhook' => [
-        'secret' => env('BALE_WEBHOOK_SECRET'),
     ],
 ];
 ```
@@ -161,19 +157,17 @@ Bale::message()
     ->send();
 ```
 
-## Webhooks
-
-Provided Safir document does not define webhook callback endpoint format/signature.  
-This package reserves `bale.webhook.secret` for when Safir webhook verification specs are available.
-
 ## Error handling
 
 Typed exceptions:
-- `BaleException`
-- `ApiException`
-- `AuthenticationException`
-- `ValidationException`
-- `RateLimitException`
+- `BaleException` — base exception for all Bale errors
+- `ApiException` — general API errors
+- `AuthenticationException` — invalid/missing API access key (401/403)
+- `ValidationException` — invalid input (422)
+- `RateLimitException` — rate limit exceeded (429)
+- `NotBaleUserException` — recipient has no Bale account (error code 17)
+- `PaymentRequiredException` — insufficient balance (error code 20)
+- `MaxContactLimitReachedException` — bot contact limit reached (error code 21)
 
 Each includes message, status code, API error code, and API payload where available.
 

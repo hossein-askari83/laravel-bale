@@ -108,8 +108,14 @@ final class MessageBuilder
             throw ValidationException::fromMessage('Destination phone number is required.');
         }
 
+        $resolvedBotId = $this->botId ?? $this->manager->defaultBotId();
+
+        if ($resolvedBotId === null) {
+            throw ValidationException::fromMessage('bot_id is required. Set BALE_DEFAULT_BOT_ID or call ->bot($id).');
+        }
+
         $request = new SendMessageRequest(
-            botId: $this->manager->requireBotId($this->botId),
+            botId: $resolvedBotId,
             phoneNumber: $this->phoneNumber,
             messageData: new MessageData(
                 message: ($this->text !== null || $this->fileId !== null)

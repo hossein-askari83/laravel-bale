@@ -13,10 +13,14 @@
     "authors": [
         {
             "name": "Hossein Askari",
-            "email": "hossein@example.com",
+            "email": "1383.hosseinaskari@gmail.com",
             "role": "Developer"
         }
     ],
+    "support": {
+        "issues": "https://github.com/hossein-askari83/laravel-bale/issues",
+        "source": "https://github.com/hossein-askari83/laravel-bale"
+    },
     "require": {
         "php": "^8.3",
         "illuminate/contracts": "^11.0|^12.0|^13.0",

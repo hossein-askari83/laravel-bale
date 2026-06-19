@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use HosseinAskari\LaravelBale\Domain\Exceptions\ApiException;
 use HosseinAskari\LaravelBale\Domain\Exceptions\AuthenticationException;
+use HosseinAskari\LaravelBale\Domain\Exceptions\NotBaleUserException;
 use HosseinAskari\LaravelBale\Facades\Bale;
 use Illuminate\Support\Facades\Http;
 
@@ -22,7 +23,7 @@ it('sends text message successfully', function (): void {
         ->send();
 
     expect($response->success)->toBeTrue()
-        ->and($response->data['message_id'])->toBe('523e6875-7c41-491b-8460-04b33039d7fc');
+        ->and($response->messageId())->toBe('523e6875-7c41-491b-8460-04b33039d7fc');
 });
 
 it('throws authentication exception on unauthorized response', function (): void {
@@ -55,3 +56,56 @@ it('throws api exception when safir returns business errors', function (): void 
         ->text('hello')
         ->send();
 })->throws(ApiException::class, 'Invalid phone number');
+
+it('throws NotBaleUserException for error code 17', function (): void {
+    Http::fake([
+        'https://safir.bale.ai/api/v3/send_message' => Http::response([
+            'message_id' => null,
+            'error_data' => [[
+                'phone_number' => '989123456789',
+                'code' => 17,
+                'description' => 'Not a Bale user',
+            ]],
+        ], 200),
+    ]);
+
+    Bale::message()
+        ->to('989123456789')
+        ->text('hello')
+        ->send();
+})->throws(NotBaleUserException::class, 'Not a Bale user');
+
+it('sends OTP message successfully', function (): void {
+    Http::fake([
+        'https://safir.bale.ai/api/v3/send_message' => Http::response([
+            'message_id' => 'otp-msg-id',
+            'error_data' => null,
+        ], 200),
+    ]);
+
+    $response = Bale::message()
+        ->to('989123456789')
+        ->otp('123456')
+        ->send();
+
+    expect($response->success)->toBeTrue()
+        ->and($response->messageId())->toBe('otp-msg-id');
+});
+
+it('sends secure message successfully', function (): void {
+    Http::fake([
+        'https://safir.bale.ai/api/v3/send_message' => Http::response([
+            'message_id' => 'secure-msg-id',
+            'error_data' => null,
+        ], 200),
+    ]);
+
+    $response = Bale::message()
+        ->to('989123456789')
+        ->text('confidential')
+        ->secure()
+        ->send();
+
+    expect($response->success)->toBeTrue()
+        ->and($response->messageId())->toBe('secure-msg-id');
+});

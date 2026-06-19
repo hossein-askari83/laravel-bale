@@ -20,8 +20,8 @@ final class BaleResponseMapper
         $success = $statusOk && count($errors) === 0;
 
         return $success
-            ? BaleResponse::success($payload, $payload)
-            : BaleResponse::failure($errors, $payload, $payload);
+            ? BaleResponse::success($payload)
+            : BaleResponse::failure($errors, $payload);
     }
 
     /**
