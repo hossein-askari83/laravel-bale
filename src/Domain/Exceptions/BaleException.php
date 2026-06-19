@@ -17,6 +17,6 @@ class BaleException extends RuntimeException
         public readonly ?int $errorCode = null,
         public readonly ?array $apiResponse = null,
     ) {
-        parent::__construct($message, $errorCode ?? 0);
+        parent::__construct($message);
     }
 }

@@ -9,29 +9,44 @@ final readonly class BaleResponse
     /**
      * @param  array<string, mixed>  $data
      * @param  array<int, BaleError>  $errors
-     * @param  array<string, mixed>|null  $raw
      */
     public function __construct(
         public bool $success,
         public array $data = [],
         public array $errors = [],
-        public ?array $raw = null,
     ) {}
 
-    /**
-     * @param  array<string, mixed>  $payload
-     */
-    public static function success(array $payload, ?array $raw = null): self
+    public static function success(array $payload): self
     {
-        return new self(true, $payload, [], $raw);
+        return new self(true, $payload);
     }
 
     /**
      * @param  array<int, BaleError>  $errors
      * @param  array<string, mixed>  $payload
      */
-    public static function failure(array $errors, array $payload = [], ?array $raw = null): self
+    public static function failure(array $errors, array $payload = []): self
     {
-        return new self(false, $payload, $errors, $raw);
+        return new self(false, $payload, $errors);
+    }
+
+    public function messageId(): ?string
+    {
+        return $this->data['message_id'] ?? null;
+    }
+
+    public function fileId(): ?string
+    {
+        return $this->data['file_id'] ?? null;
+    }
+
+    public function firstError(): ?BaleError
+    {
+        return $this->errors[0] ?? null;
+    }
+
+    public function hasErrors(): bool
+    {
+        return $this->errors !== [];
     }
 }

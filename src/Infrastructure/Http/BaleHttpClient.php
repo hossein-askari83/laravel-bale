@@ -10,6 +10,10 @@ use HosseinAskari\LaravelBale\Domain\DTOs\BaleResponse;
 use HosseinAskari\LaravelBale\Domain\DTOs\SendMessageRequest;
 use HosseinAskari\LaravelBale\Domain\Exceptions\ApiException;
 use HosseinAskari\LaravelBale\Domain\Exceptions\AuthenticationException;
+use HosseinAskari\LaravelBale\Domain\Exceptions\BaleException;
+use HosseinAskari\LaravelBale\Domain\Exceptions\MaxContactLimitReachedException;
+use HosseinAskari\LaravelBale\Domain\Exceptions\NotBaleUserException;
+use HosseinAskari\LaravelBale\Domain\Exceptions\PaymentRequiredException;
 use HosseinAskari\LaravelBale\Domain\Exceptions\RateLimitException;
 use HosseinAskari\LaravelBale\Domain\Exceptions\ValidationException;
 use HosseinAskari\LaravelBale\Infrastructure\Http\Mappers\BaleResponseMapper;
@@ -86,14 +90,14 @@ final class BaleHttpClient implements BaleClientInterface
         $this->throwForFailure($response);
 
         if (! $mapped->success) {
-            $firstError = $mapped->errors[0] ?? null;
+            $firstError = $mapped->firstError();
             $message = $firstError === null ? 'Bale API request failed.' : $firstError->description;
 
-            throw new ApiException(
+            throw $this->exceptionForErrorCode(
                 message: $message,
                 statusCode: $response->status(),
                 errorCode: $firstError?->code,
-                apiResponse: $mapped->raw
+                apiResponse: $mapped->data,
             );
         }
 
@@ -119,6 +123,20 @@ final class BaleHttpClient implements BaleClientInterface
         } catch (Throwable $throwable) {
             throw new ApiException($throwable->getMessage());
         }
+    }
+
+    private function exceptionForErrorCode(
+        string $message,
+        ?int $statusCode,
+        ?int $errorCode,
+        ?array $apiResponse,
+    ): BaleException {
+        return match ($errorCode) {
+            17 => new NotBaleUserException($message, $statusCode, $errorCode, $apiResponse),
+            20 => new PaymentRequiredException($message, $statusCode, $errorCode, $apiResponse),
+            21 => new MaxContactLimitReachedException($message, $statusCode, $errorCode, $apiResponse),
+            default => new ApiException($message, $statusCode, $errorCode, $apiResponse),
+        };
     }
 
     private function logResponse(string $operation, Response $response): void

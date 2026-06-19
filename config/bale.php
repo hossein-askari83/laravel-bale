@@ -20,8 +20,4 @@ return [
         'enabled' => (bool) env('BALE_LOGGING_ENABLED', true),
         'channel' => env('BALE_LOG_CHANNEL'),
     ],
-
-    'webhook' => [
-        'secret' => env('BALE_WEBHOOK_SECRET'),
-    ],
 ];

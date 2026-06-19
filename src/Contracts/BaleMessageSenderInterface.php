@@ -13,6 +13,4 @@ interface BaleMessageSenderInterface
     public function message(?int $botId = null): MessageBuilder;
 
     public function sendMessage(SendMessageRequest $request): BaleResponse;
-
-    public function uploadFile(string $path): BaleResponse;
 }
